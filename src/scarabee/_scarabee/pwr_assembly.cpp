@@ -957,6 +957,66 @@ std::vector<double> PWRAssembly::compute_avg_flx(const Vector& r,
   return flx;
 }
 
+void PWRAssembly::load_hdf5_pwr_assembly_moc(const std::string& fname, const std::string& group) {
+  if (pins_.size() == 0) {
+    auto mssg = "Cannot solve PWR assembly problem. No pins provided.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (condensation_scheme_.size() == 0) {
+    auto mssg =
+        "Cannot solve PWR assembly problem. No energy condensation scheme "
+        "provided.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  if (few_group_condensation_scheme_.size() == 0) {
+    auto mssg =
+        "Cannot solve PWR assembly problem. Few-group energy condensation "
+        "scheme is empty.";
+    spdlog::error(mssg);
+    throw ScarabeeException(mssg);
+  }
+
+  get_fuel_dancoff_corrections();
+  get_clad_dancoff_corrections();
+  pin_cell_calc();
+  condense_xs();
+
+  spdlog::info("");
+  spdlog::info("Loading the pre-store assembly MOC calculation");
+
+  std::vector<Cartesian2D::TileFill> moc_pins;
+  moc_pins.reserve(pins_.size());
+  for (std::size_t i = 0; i < pins_.size(); i++) {
+    const auto& pin = pins_[i];
+    moc_pins.push_back(std::visit(
+        [this](const auto& P) { return P->make_moc_cell(pitch_); }, pin));
+  }
+
+  std::vector<double> dx(shape_.first, pitch_);
+  std::vector<double> dy(shape_.second, pitch_);
+  moc_geom_ = std::make_shared<Cartesian2D>(dx, dy);
+  moc_geom_->set_tiles(moc_pins);
+
+  moc_ = std::make_shared<MOCDriver>(moc_geom_, boundary_conditions_,
+                                     boundary_conditions_, boundary_conditions_,
+                                     boundary_conditions_, anisotropic_);
+  if (plot_assembly_) {
+    ImApp::App guiplotter(1920, 1080, "Scarabee MOC Plotter");
+    guiplotter.enable_docking();
+    guiplotter.push_layer(std::make_unique<MOCPlotter>(moc_.get()));
+    guiplotter.run();
+  }
+  moc_->generate_tracks(num_azimuthal_angles_, track_spacing_,
+                        polar_quadrature_);
+  moc_->set_keff_tolerance(keff_tolerance_);
+  moc_->set_flux_tolerance(flux_tolerance_);
+  moc_->load_hdf5(fname, group);
+}
+
 }  // namespace scarabee
 
 // REFERENCES

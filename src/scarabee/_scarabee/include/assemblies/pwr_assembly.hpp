@@ -133,6 +133,7 @@ class PWRAssembly {
 
   void solve();
   void save_diffusion_data(const std::string& fname) const;
+  void load_hdf5_pwr_assembly_moc(const std::string& fname, const std::string& group);
 
  private:
   double pitch_;

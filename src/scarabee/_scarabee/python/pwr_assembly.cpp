@@ -204,5 +204,15 @@ void init_PWRAssembly(py::module& m) {
 
       .def_property_readonly("pitch", &PWRAssembly::pitch)
 
-      .def_property_readonly("shape", &PWRAssembly::pitch);
+      .def_property_readonly("shape", &PWRAssembly::pitch)
+
+      .def("load_hdf5_pwr_assembly_moc", &PWRAssembly::load_hdf5_pwr_assembly_moc,
+           "Loads MOC in PWR Assembly results from an HDF5 file.\n\n"
+           "Parameters\n"
+           "----------\n"
+           "fname : str\n"
+           "        Name of HDF5 file.\n"
+           "group : str\n"
+           "        Name of group in HDF5 file to save results.\n",
+           py::arg("fname"), py::arg("group"));
 }
